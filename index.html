@@ -173,7 +173,7 @@ button,label{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
   function shareFiles(){
     try{
-      var f=pieces.map(function(p){return new File([p.blob],p.name,{type:p.blob.type})});
+      var now=Date.now(),f=pieces.map(function(p,i){return new File([p.blob],p.name,{type:p.blob.type,lastModified:now-i*60000})});
       return {files:f,ok:!!(navigator.canShare&&navigator.canShare({files:f}))};
     }catch(e){return {files:[],ok:false}}
   }
