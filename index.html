@@ -151,15 +151,20 @@ button,label{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
         var im=document.createElement('img');im.src=u;im.alt=name;
         var lb=document.createElement('div');lb.textContent=String(idx);
         t.appendChild(im);t.appendChild(lb);
-        if(dl){
+        {
           var sb=document.createElement('button');sb.className='sub';sb.textContent='保存';
           sb.addEventListener('click',(function(p){return function(){save(p.name,p.blob)}})(pieces[pieces.length-1]));
           t.appendChild(sb);
         }
+        if(window.ClipboardItem&&navigator.clipboard){
+          var cb=document.createElement('button');cb.className='sub';cb.textContent='コピー';
+          cb.addEventListener('click',(function(p,b){return function(){copyImg(p,b)}})(pieces[pieces.length-1],cb));
+          t.appendChild(cb);
+        }
         out.appendChild(t);
       }
       $('zip').disabled=false;$('share').hidden=!shareFiles().ok;
-      $('hint').textContent=pieces.length+'枚に分割しました。'+(dl?'ZIPか各画像の「保存」から保存できます。':'各画像を長押しして保存してください。');
+      $('hint').textContent=pieces.length+'枚に分割しました。'+(true?'ZIPか各画像の「保存」から保存できます。':'各画像を長押しして保存してください。');
     }catch(e){
       $('hint').textContent='分割に失敗しました。画像サイズが大きすぎる可能性があります。';
     }
@@ -178,14 +183,30 @@ button,label{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     catch(e){if(e&&e.name!=='AbortError')$('hint').textContent='共有できませんでした。画像を長押しして保存してください。'}
   });
 
+  function anchorSave(name,data){
+    var u=URL.createObjectURL(data),a=document.createElement('a');
+    a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(u)},4000);
+  }
+  async function copyImg(p,btn){
+    try{
+      var bm=await createImageBitmap(p.blob),cv=document.createElement('canvas');
+      cv.width=bm.width;cv.height=bm.height;cv.getContext('2d').drawImage(bm,0,0);
+      var pb=await toBlob(cv,'image/png');
+      await navigator.clipboard.write([new ClipboardItem({'image/png':pb})]);
+      btn.textContent='コピー済';
+    }catch(e){btn.textContent='失敗'}
+    setTimeout(function(){btn.textContent='コピー'},1500);
+  }
+
   async function save(name,data){
-    try{await dl.save({filename:name,data:data})}
-    catch(e){if(e&&e.code!=='declined')$('hint').textContent='保存できませんでした。画像を長押しして保存してください。'}
+    try{if(dl){await dl.save({filename:name,data:data})}else{anchorSave(name,data)}}
+    catch(e){if(e&&e.code!=='declined')$('hint').textContent='保存できませんでした('+e.code+')。画像を右クリック(スマホは長押し)で保存してください。'}
   }
 
   $('zip').addEventListener('click',async function(){
     if(!pieces.length)return;
-    if(!dl||!window.JSZip){$('hint').textContent='ZIP保存はこの環境で使えません。各画像を長押しして保存してください。';return}
+    if(!window.JSZip){$('hint').textContent='ZIP用のライブラリを読み込めませんでした。通信環境を確認して再読み込みしてください。';return}
     var z=new JSZip();
     pieces.forEach(function(p){z.file(p.name,p.blob)});
     var blob=await z.generateAsync({type:'blob'});
