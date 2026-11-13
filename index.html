@@ -208,7 +208,7 @@ button,label{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     if(!pieces.length)return;
     if(!window.JSZip){$('hint').textContent='ZIP用のライブラリを読み込めませんでした。通信環境を確認して再読み込みしてください。';return}
     var z=new JSZip();
-    pieces.forEach(function(p){z.file(p.name,p.blob)});
+    var now=Date.now();pieces.forEach(function(p,i){z.file(p.name,p.blob,{date:new Date(now-i*4000)})});
     var blob=await z.generateAsync({type:'blob'});
     save(img.baseName+'_split.zip',blob);
   });
